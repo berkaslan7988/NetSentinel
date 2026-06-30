@@ -1,0 +1,35 @@
+flowchart TB
+    subgraph CAP["1 - Capture Layer"]
+        SNIFF["Scapy AsyncSniffer<br/>(capture thread - light)"]
+    end
+
+    subgraph PROC["Worker Threads"]
+        FLOW["2 - FlowManager<br/>5-tuple bidirectional<br/>active/idle/FIN-RST timeout"]
+        FEAT["3 - FeatureExtractor<br/>78 CIC-IDS2017 features"]
+        DET["4 - DetectionEngine<br/>RandomForest + IsolationForest + Autoencoder<br/>scaler (same as training)"]
+        ALERT["5 - AlertEngine<br/>RF-weighted 0-100 risk<br/>dedup / aggregation / IP profile"]
+    end
+
+    subgraph OUT["Output"]
+        DB[("6 - SQLite<br/>flows / alerts / stats<br/>batch insert")]
+        UI["7 - Dashboard<br/>PySide6 + pyqtgraph<br/>QTimer 250ms batch"]
+        REP["9 - Reporting<br/>CSV / PDF / metrics"]
+    end
+
+    SNIFF -->|"raw packet -> queue"| FLOW
+    FLOW -->|"closed flow"| FEAT
+    FEAT -->|"feature vector"| DET
+    DET -->|"DetectionResult"| ALERT
+    ALERT -->|"Alert"| DB
+    ALERT --> UI
+    DET --> DB
+    DB --> REP
+
+    REPLAY["Replay source<br/>CIC-IDS2017 CSV / DB"] -.->|"demo mode"| DET
+
+    classDef cap fill:#0f140f,stroke:#33ff66,color:#7dffa0
+    classDef proc fill:#0f140f,stroke:#00ffcc,color:#33ff66
+    classDef out fill:#0f140f,stroke:#1f9a3f,color:#33ff66
+    class SNIFF cap
+    class FLOW,FEAT,DET,ALERT proc
+    class DB,UI,REP,REPLAY out

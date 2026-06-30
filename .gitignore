@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Data & models (large; not committed)
+**/data/*
+!**/data/.gitignore
+**/models/*.pkl
+**/models/*.pt
+**/models/*.joblib
+**/reports/
+
+# Capture outputs
+*.pcap
+*.pcapng
+*.db
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+.pytest_cache/
