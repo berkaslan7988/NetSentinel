@@ -2,6 +2,8 @@
 
 **Real-Time Network Traffic Anomaly & Intrusion Detection System**
 
+<img width="1920" height="1080" alt="resim" src="https://github.com/user-attachments/assets/e09bc202-1f28-4a22-9313-9cde3eef66f6" />
+
 A desktop security tool that captures live network traffic, extracts flow-based
 features, detects anomalies/attacks with both supervised (RandomForest) and
 unsupervised (IsolationForest + Autoencoder) ML models, raises low-noise alerts,
