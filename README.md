@@ -57,16 +57,10 @@ interface language (English / Türkçe). `Ctrl+1` … `Ctrl+5` jump between view
 
 ## How it works
 
-```mermaid
-flowchart LR
-    CAP["Capture<br/>Scapy AsyncSniffer"] --> FLOW["Flows<br/>5-tuple, idle / active / FIN timeouts"]
-    FLOW --> FEAT["Features<br/>78 CIC-IDS2017 columns"]
-    FEAT --> DET["Detect<br/>RF + IsolationForest + Autoencoder"]
-    DET --> ALERT["Alerts<br/>0-100 risk, grouped per source"]
-    ALERT --> UI["Dashboard"]
-    ALERT --> DB[("SQLite")]
-    DEMO["Demo / CSV / DB replay"] -.-> DET
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/pipeline-dark.svg">
+  <img alt="Pipeline: capture, 5-tuple flows, 78 features, RF + IF + AE detection, 0-100 risk alerts grouped per source, dashboard and SQLite. Demo, CSV and DB replay join before the alerts. Capture runs on its own thread, flows to alerts on worker threads, the console on the UI thread." src="assets/pipeline-light.svg">
+</picture>
 
 - **Risk** = 75 × RandomForest attack probability + 25 × unsupervised agreement
   (1.0 when IsolationForest and the autoencoder both flag the flow, 0.3 when one does).
