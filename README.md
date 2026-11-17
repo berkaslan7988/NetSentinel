@@ -1,85 +1,85 @@
-# NetSentinel 🛡️
+# NetSentinel
 
-**Real-Time Network Traffic Anomaly & Intrusion Detection System**
+**Real-time network intrusion detection with a desktop SOC console.** NetSentinel
+captures live traffic, rebuilds it into flows with the 78 CIC-IDS2017 features, scores
+every flow with a hybrid detector (RandomForest + IsolationForest + autoencoder), and
+groups the threats into low-noise alerts with a 0–100 risk score.
 
-<img width="1920" height="1080" alt="resim" src="https://github.com/user-attachments/assets/e09bc202-1f28-4a22-9313-9cde3eef66f6" />
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/screens/overview-dark.png">
+  <img alt="NetSentinel overview: session totals, a ten-minute flow timeline with attack markers, live threat flows with RF/IF/AE model signals, open alerts and top sources" src="assets/screens/overview-light.png">
+</picture>
 
-A desktop security tool that captures live network traffic, extracts flow-based
-features, detects anomalies/attacks with both supervised (RandomForest) and
-unsupervised (IsolationForest + Autoencoder) ML models, raises low-noise alerts,
-and visualizes everything in a **phosphor-green terminal-style** PySide6 dashboard.
+`Python 3.10+` · `PySide6` · `Scapy` · `scikit-learn` · `PyTorch` · `SQLite` · English / Türkçe · MIT
 
-`Python 3.10+` · `Scapy` · `scikit-learn` · `PyTorch` · `PySide6` · `pyqtgraph` · `SQLite`
+> [!WARNING]
+> Capture traffic only on networks you own or are authorized to test. The attack
+> simulator refuses public targets and needs an explicit `--yes`.
 
-> 🇹🇷 **Türkçe açıklama için sayfanın alt yarısına bakın** ([Türkçe](#netsentinel-türkçe)).
+## Try it in a minute
 
-> 📁 **This repo contains two language variants of the same project:**
-> [`netsentinel/`](netsentinel) (English code & docs) and
-> [`netsentineltr/`](netsentineltr) (Turkish code & docs). Pick a folder and
-> `cd` into it to run the commands below. · Bu repo aynı projenin iki dil
-> sürümünü içerir: `netsentinel/` (İngilizce) ve `netsentineltr/` (Türkçe).
-
----
-
-## ⚠️ Legal & Ethical Notice
-
-**This tool must only be used on your own network or in an authorized lab.**
-
-- Capturing packets on networks you don't own is **illegal** in most jurisdictions.
-- Run attack simulations (port scan, SYN flood) only against **your own machine /
-  an isolated test network / your own VM**. The simulator refuses public IP
-  targets and requires explicit confirmation (`--yes`).
-- All responsibility for misuse lies with the user.
-
----
-
-## 🧩 Features
-
-| Module | Description | Status |
-|---|---|---|
-| **Capture** | Live packet capture via Scapy `AsyncSniffer`; light capture thread | ✅ |
-| **Flow Manager** | Bidirectional 5-tuple flow assembly, active/idle/FIN-RST timeout | ✅ |
-| **Feature Extractor** | ~78 features exactly matching CIC-IDS2017 (microsecond units) | ✅ |
-| **Detection Engine** | RandomForest + IsolationForest + PyTorch Autoencoder, shared scaler | ✅ |
-| **Alert Engine** | RF-weighted 0-100 risk score, dedup/aggregation, attacker IP profile | ✅ |
-| **Storage** | SQLite (flows/alerts/stats), thread-safe batch insert, query API | ✅ |
-| **Dashboard** | PySide6 + pyqtgraph live panel, terminal/hacker theme, replay mode | ✅ |
-| **Attack Sim & Benchmark** | Safety-guarded attack simulator + performance measurement | ✅ |
-
----
-
-## 🏛️ Architecture
-
-```mermaid
-flowchart TB
-    SNIFF["1 - Capture<br/>Scapy AsyncSniffer"]
-    FLOW["2 - FlowManager<br/>5-tuple bidirectional + timeout"]
-    FEAT["3 - FeatureExtractor<br/>78 CIC-IDS2017 features"]
-    DET["4 - DetectionEngine<br/>RF + IsolationForest + Autoencoder"]
-    ALERT["5 - AlertEngine<br/>0-100 risk - dedup - IP profile"]
-    DB[("6 - SQLite<br/>flows / alerts / stats")]
-    UI["7 - Dashboard<br/>PySide6 + pyqtgraph"]
-    REPLAY["Replay: CIC CSV / DB"]
-
-    SNIFF -->|raw packet| FLOW --> FEAT --> DET --> ALERT
-    ALERT --> DB
-    ALERT --> UI
-    DET --> DB
-    REPLAY -.->|demo mode| DET
-
-    classDef n fill:#0f140f,stroke:#33ff66,color:#7dffa0
-    class SNIFF,FLOW,FEAT,DET,ALERT,DB,UI,REPLAY n
+```bash
+cd netsentinel
+pip install -r requirements.txt
+python dashboard.py --demo
 ```
 
-**Threading model (critical design rule):** the capture thread never does heavy
-work - it captures a packet and pushes it to a queue. Flow/feature/inference run
-on separate worker threads. The UI only reads thread-safe queues via a `QTimer`
-every 250ms; a worker thread never touches a widget. (Full diagram:
-[`netsentinel/docs/architecture.mermaid`](netsentinel/docs/architecture.mermaid))
+Demo mode needs **no trained models, no Npcap and no admin rights**. It streams a
+small office network (192.168.10.0/24) and a scripted attack cycle (port scan, FTP and
+SSH brute force, HTTP flood, an internal SMB sweep, a web attack, a DNS anomaly and a
+slow beacon) through the real risk scorer and alert engine. Scoring, grouping and every
+chart run the same code as live detection. Only the model outputs are synthetic, drawn
+from the measured detection rates.
 
----
+## The console
 
-## 📊 Results (CIC-IDS2017, ~2.36M flows)
+<table>
+<tr>
+<td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/screens/alerts-dark.png"><img alt="Alerts view with the score breakdown of an SSH brute-force alert" src="assets/screens/alerts-light.png"></picture></td>
+<td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/screens/flows-dark.png"><img alt="Flows view with each model's output for a selected flow" src="assets/screens/flows-light.png"></picture></td>
+</tr>
+<tr>
+<td><b>Alerts</b>: one alert per source per 60 s window, with its activity, the peak flow's score breakdown and the volume floor.</td>
+<td><b>Flows</b>: every scored flow, filterable by IP, port or verdict, with RF probability, IsolationForest score and autoencoder error against its threshold.</td>
+</tr>
+<tr>
+<td><picture><source media="(prefers-color-scheme: dark)" srcset="assets/screens/sources-dark.png"><img alt="Sources view with per-IP profiles and the most targeted hosts" src="assets/screens/sources-light.png"></picture></td>
+<td><picture><source media="(prefers-color-scheme: dark)" srcset="assets/screens/models-dark.png"><img alt="Models view with CIC-IDS2017 scores and the scoring rules" src="assets/screens/models-light.png"></picture></td>
+</tr>
+<tr>
+<td><b>Sources</b>: per-IP threat profiles (internal or external, peak and total risk, 10-minute activity) and the hosts they hit.</td>
+<td><b>Models</b>: the three detectors, their CIC-IDS2017 scores, and how risk and severity are computed.</td>
+</tr>
+</table>
+
+Light and dark themes follow the system and switch from the top bar, and so does the
+interface language (English / Türkçe). `Ctrl+1` … `Ctrl+5` jump between views.
+
+## How it works
+
+```mermaid
+flowchart LR
+    CAP["Capture<br/>Scapy AsyncSniffer"] --> FLOW["Flows<br/>5-tuple, idle / active / FIN timeouts"]
+    FLOW --> FEAT["Features<br/>78 CIC-IDS2017 columns"]
+    FEAT --> DET["Detect<br/>RF + IsolationForest + Autoencoder"]
+    DET --> ALERT["Alerts<br/>0-100 risk, grouped per source"]
+    ALERT --> UI["Dashboard"]
+    ALERT --> DB[("SQLite")]
+    DEMO["Demo / CSV / DB replay"] -.-> DET
+```
+
+- **Risk** = 75 × RandomForest attack probability + 25 × unsupervised agreement
+  (1.0 when IsolationForest and the autoencoder both flag the flow, 0.3 when one does).
+  With a typical benign RF probability of 0.05, a lone autoencoder flag scores about 11
+  and raises no alert.
+- **Severity**: medium from 25, high from 50, critical from 75. Threat flows from one
+  source within 60 s merge into one alert, and its volume sets a floor (10 flows medium,
+  30 high, 100 critical), so a port scan is one alert, not 500 lines.
+- **Threading**: the capture thread only queues packets. Flow assembly, features and
+  inference run on worker threads. The UI drains thread-safe queues every 250 ms and
+  never blocks on the network. ([full diagram](netsentinel/docs/architecture.mermaid))
+
+## Results on CIC-IDS2017 (~2.36 M flows)
 
 | Model | F1 | Precision | Recall | ROC-AUC | FPR |
 |---|---|---|---|---|---|
@@ -87,247 +87,90 @@ every 250ms; a worker thread never touches a widget. (Full diagram:
 | **Autoencoder** (unsupervised) | 0.6027 | 0.9081 | 0.4510 | — | 1.00% |
 | **IsolationForest** (unsupervised) | 0.5081 | 0.8049 | 0.3712 | — | 1.98% |
 
-**Performance:** inference mean **~9.3 ms/flow** (p95 ~10 ms), sustainable
-**~108 flows/s** (RF + IsolationForest, hybrid). Inference is far below the 50 ms
-target - a single flow is not the bottleneck.
+Inference averages **~9.3 ms per flow** (p95 ~10 ms), about **108 flows/s** sustained.
+The supervised model carries known attacks. The unsupervised pair adds zero-day-style
+coverage, and the agreement rule keeps its false positives from flooding the alerts.
 
-> The supervised model is very strong on known attacks; the unsupervised models
-> are for zero-day-like detection (lower recall, higher FPR). In hybrid mode the
-> risk score is RF-weighted + unsupervised agreement, so a single unsupervised
-> flag does not produce a false-alarm flood.
+## Live detection
 
----
+1. **Npcap** (Windows): install [Npcap](https://npcap.com/) in *WinPcap API-compatible
+   mode*. On Linux use `libpcap` with `sudo` or `setcap`.
+2. **Models**: put the [CIC-IDS2017 CSVs](https://www.unb.ca/cic/datasets/ids-2017.html)
+   in `netsentinel/data/cic-ids-2017/` and train. Install PyTorch for your platform first.
+   ```bash
+   python -m training.train_supervised        # RandomForest
+   python -m training.train_unsupervised      # IsolationForest
+   python -m training.autoencoder --epochs 20 # autoencoder
+   python -m training.evaluate --pdf          # report + confusion matrices
+   ```
+3. **Run** as administrator:
+   ```bash
+   python dashboard.py                         # pick "Live capture" in the top bar
+   python main.py --detect --save --duration 60  # headless, writes to SQLite
+   ```
 
-## 📦 Installation
+The dashboard can also replay a CIC-IDS2017 CSV through the trained models, or replay a
+session saved by `main.py --save`.
 
-### 1. Npcap (Windows - required)
-Install [Npcap](https://npcap.com/) with **"Install Npcap in WinPcap API-compatible
-Mode"** checked. (The "Npcap Loopback Adapter" is also installed, to capture
-loopback traffic.) On Linux: `libpcap` + `sudo`/`setcap`.
+<details>
+<summary>Attack simulation and benchmark (your own machine or lab only)</summary>
 
-### 2. Dependencies
-```bash
-python -m venv venv
-venv\Scripts\activate            # Windows
-pip install -r requirements.txt
-# Install PyTorch per your platform: https://pytorch.org/get-started/locally/
-```
-
-### 3. Train the models (Phase 3)
-Put the [CIC-IDS2017 CSV](https://www.unb.ca/cic/datasets/ids-2017.html) files
-under `data/cic-ids-2017/`, then:
-```bash
-python -m training.train_supervised        # RandomForest
-python -m training.train_unsupervised       # IsolationForest
-python -m training.autoencoder --epochs 20  # PyTorch Autoencoder
-python -m training.evaluate --pdf           # combined report + confusion matrices
-```
-
----
-
-## 🚀 Usage
-
-### Live detection (CLI)
-```bash
-# Run as ADMINISTRATOR on Windows:
-python main.py --detect --save --duration 60
-python main.py --detect --mode supervised --verbose
-```
-
-### Dashboard
-```bash
-python dashboard.py
-#  Source "Live"       -> real-time capture
-#  Source "Replay: CSV" -> runs a CIC-IDS2017 CSV through the models (ideal for a demo/GIF)
-#  Source "Replay: DB"  -> replays a past session
-```
-
-### Controlled attack simulation (your own / lab network only)
 ```bash
 python tests/attack_simulator.py port-scan --target 127.0.0.1 --ports 1-1000 --yes
 python tests/attack_simulator.py syn-flood --target 127.0.0.1 --port 80 --count 800 --yes
-```
-> Note: to capture 127.0.0.1 traffic on Windows, run the sniffer with
-> `--iface "Npcap Loopback Adapter"`.
-
-### Performance benchmark
-```bash
 python tests/benchmark.py
 ```
 
----
+To capture 127.0.0.1 on Windows, sniff on `--iface "Npcap Loopback Adapter"`.
+</details>
 
-## 🧠 ML / Dataset
-
-- **Primary data:** CIC-IDS2017 (DDoS, PortScan, DoS Hulk/GoldenEye/Slowloris,
-  Brute Force, Web Attack, Infiltration, Botnet, Heartbleed).
-- **Feature space:** exactly matches CICFlowMeter's 78 features (name + order).
-  The live `FeatureExtractor` and training share the same space - critical for
-  the accuracy of live detection.
-- **Data prep:** Inf/NaN cleaning, binary labels, stratified 70/30 split,
-  StandardScaler fit on train only (no data leakage).
-- **Unsupervised models** are trained on BENIGN traffic only (the autoencoder
-  threshold = the 99th percentile of the BENIGN reconstruction error).
-
----
-
-## 🧪 Tests
+## Tests
 
 ```bash
-pytest -q          # 75 unit/integration tests
+cd netsentinel
+pytest -q        # 83 tests: capture, flows, features, detection, alerts, storage, pipeline, demo, i18n
 ```
-The architecture is deliberately layered and UI/network-independent: the capture,
-flow, feature, detection, alert, storage and pipeline layers are testable without
-hardware or a network.
 
----
+Every layer below the UI runs without a network card, admin rights or trained models.
 
-## 📂 Project Layout
+## Project layout
 
 ```
 netsentinel/
-├── capture/      # packet capture (Scapy)
-├── flows/        # 5-tuple flow management + timeout
-├── features/     # CIC-IDS2017-compatible feature extraction
-├── detection/    # ML inference engine + worker + result
-├── alerts/       # risk scoring + alert aggregation
-├── storage/      # SQLite layer + batch writer
-├── ui/           # PySide6 dashboard (theme, pipeline, widgets)
-├── training/     # offline training: prepare/supervised/unsupervised/AE/evaluate
-├── reporting/    # PDF report generation
-├── tests/        # pytest suite + attack_simulator + benchmark
-├── docs/         # architecture diagram
-├── packaging/    # PyInstaller spec + build script
-├── config.py · main.py · dashboard.py
+├── capture/  flows/  features/   packet capture -> 5-tuple flows -> 78 features
+├── detection/  alerts/  storage/ inference, risk + grouping, SQLite
+├── ui/                           PySide6 console: theme, painted widgets, views, demo, i18n
+├── training/  reporting/         offline training, evaluation, PDF reports
+├── tests/                        pytest suite, attack simulator, benchmark
+├── packaging/                    PyInstaller spec, icon, build script
+└── dashboard.py · main.py · config.py
+tools/                            screenshots.py, build_fonts.py, build_icon.py
 ```
 
----
+## Design
 
-## 📄 License
+A quiet SOC console rather than a hacker terminal. Surfaces are graphite, and **color
+only means severity**: violet for medium, orange for high, red for critical. Everything
+else is ink and grey, and primary buttons are ink. Charts and tables are painted
+with QPainter, icons are inline SVG, and both themes are first-class.
 
-MIT — see [LICENSE](netsentinel/LICENSE).
+Type is [Instrument Sans](https://github.com/Instrument/instrument-sans) for the
+interface and [IBM Plex Mono](https://github.com/IBM/plex) for every number, address
+and port. Both are bundled under the SIL Open Font License (`netsentinel/ui/fonts/`).
 
-<br/><br/>
+`python tools/screenshots.py` re-renders every screenshot above off-screen from the
+demo, in both themes, in a throwaway home folder. `--lang tr` renders the Turkish UI.
 
----
----
+## Türkçe
 
-<a name="netsentinel-türkçe"></a>
-# NetSentinel 🛡️ (Türkçe)
+NetSentinel, canlı ağ trafiğini akışlara ayıran ve her akışı RandomForest, IsolationForest
+ve autoencoder ile puanlayan bir saldırı tespit sistemidir. Tehditleri 0–100 risk
+puanlı, kaynağa göre gruplanmış alarmlar olarak masaüstü konsolunda gösterir. Arayüz
+Türkçe de kullanılabilir: üst çubuktaki **EN / TR** düğmesi dili değiştirir, ya da
+`python dashboard.py --demo --lang tr` ile başlatabilirsin. Demo modu model, Npcap ya da
+yönetici hakkı istemez. Canlı yakalamayı yalnızca kendi ağında ya da izinli bir
+laboratuvarda kullan.
 
-**Gerçek Zamanlı Ağ Trafiği Anomali & Saldırı Tespit Sistemi**
+## License
 
-Canlı ağ trafiğini yakalayıp akış (flow) bazlı özellikler çıkaran, hem denetimli
-(RandomForest) hem denetimsiz (IsolationForest + Autoencoder) ML modelleriyle
-anomali/saldırı tespiti yapan, gürültüsüz alarmlar üreten ve **fosfor yeşil
-terminal estetiğinde** bir PySide6 dashboard'da görselleştiren masaüstü güvenlik
-aracı.
-
----
-
-## ⚠️ Yasal & Etik Uyarı
-
-**Bu araç YALNIZCA kendi ağında veya yetkili bir laboratuvar ortamında kullanılmalıdır.**
-
-- İzinsiz ağlarda paket yakalamak çoğu ülkede **yasa dışıdır**.
-- Saldırı simülasyonlarını yalnızca **kendi makinende / izole bir test ağında /
-  kendi VM'inde** çalıştır. Simülatör public IP hedeflerini reddeder ve açık
-  onay (`--yes`) ister.
-- Kötüye kullanımdan doğacak sorumluluk tamamen kullanıcıya aittir.
-
----
-
-## 🧩 Özellikler
-
-| Modül | Açıklama | Durum |
-|---|---|---|
-| **Capture** | Scapy `AsyncSniffer` ile canlı paket yakalama; hafif yakalama thread'i | ✅ |
-| **Flow Manager** | Bidirectional 5-tuple akış birleştirme, active/idle/FIN-RST timeout | ✅ |
-| **Feature Extractor** | CIC-IDS2017 ile birebir uyumlu ~78 özellik (µs birimleri) | ✅ |
-| **Detection Engine** | RandomForest + IsolationForest + PyTorch Autoencoder, ortak scaler | ✅ |
-| **Alert Engine** | RF-ağırlıklı 0-100 risk skoru, dedup/aggregation, saldırgan IP profili | ✅ |
-| **Storage** | SQLite (flows/alerts/stats), thread-safe batch insert, sorgu API | ✅ |
-| **Dashboard** | PySide6 + pyqtgraph canlı panel, terminal/hacker teması, replay modu | ✅ |
-| **Saldırı Sim & Benchmark** | Güvenlik korumalı saldırı simülatörü + performans ölçümü | ✅ |
-
----
-
-## 📊 Sonuçlar (CIC-IDS2017, ~2.36M akış)
-
-| Model | F1 | Precision | Recall | ROC-AUC | FPR |
-|---|---|---|---|---|---|
-| **RandomForest** (denetimli) | **0.9968** | 0.9950 | 0.9987 | 1.0000 | %0.11 |
-| **Autoencoder** (denetimsiz) | 0.6027 | 0.9081 | 0.4510 | — | %1.00 |
-| **IsolationForest** (denetimsiz) | 0.5081 | 0.8049 | 0.3712 | — | %1.98 |
-
-**Performans:** inference ortalama **~9.3 ms/akış** (p95 ~10 ms), sürdürülebilir
-**~108 akış/sn**. 50 ms hedefinin çok altında.
-
-> Denetimli model bilinen saldırılarda çok güçlüdür; denetimsiz modeller sıfır-gün
-> benzeri tespit içindir. Hybrid modda risk skoru RF-ağırlıklı + denetimsiz
-> mutabakatla hesaplanır; böylece tek bir denetimsiz bayrak yanlış alarm seli
-> üretmez.
-
----
-
-## 📦 Kurulum
-
-### 1. Npcap (Windows — zorunlu)
-[Npcap](https://npcap.com/) kur; **"Install Npcap in WinPcap API-compatible Mode"**
-seçeneğini işaretle. (127.0.0.1 trafiğini yakalamak için "Npcap Loopback Adapter"
-da kurulur.) Linux'ta `libpcap` + `sudo`/`setcap`.
-
-### 2. Bağımlılıklar
-```bash
-python -m venv venv
-venv\Scripts\activate
-pip install -r requirements.txt
-# PyTorch'u platformuna göre: https://pytorch.org/get-started/locally/
-```
-
-### 3. Modelleri eğit
-[CIC-IDS2017 CSV](https://www.unb.ca/cic/datasets/ids-2017.html) dosyalarını
-`data/cic-ids-2017/` altına koy, sonra:
-```bash
-python -m training.train_supervised
-python -m training.train_unsupervised
-python -m training.autoencoder --epochs 20
-python -m training.evaluate --pdf
-```
-
----
-
-## 🚀 Kullanım
-
-```bash
-# Canlı tespit (Windows'ta YÖNETİCİ terminalde):
-python main.py --detect --save --duration 60
-
-# Dashboard:
-python dashboard.py
-#   Kaynak "Replay: CSV" -> bir CIC CSV seç -> dashboard gerçek saldırılarla canlanır
-
-# Kontrollü saldırı (yalnız kendi/lab ağı):
-python tests/attack_simulator.py port-scan --target 127.0.0.1 --ports 1-1000 --yes
-
-# Performans:
-python tests/benchmark.py
-```
-> Not: Windows'ta 127.0.0.1 trafiğini yakalamak için sniffer'ı
-> `--iface "Npcap Loopback Adapter"` ile çalıştır.
-
----
-
-## 🧪 Testler
-
-```bash
-pytest -q          # 75 unit/entegrasyon testi
-```
-Mimari kasıtlı olarak katmanlı ve UI/ağ-bağımsız: tüm katmanlar donanım/ağ
-olmadan test edilebilir.
-
----
-
-## 📄 Lisans
-
-MIT — bkz. [LICENSE](netsentineltr/LICENSE).
+MIT, see [LICENSE](LICENSE). The bundled fonts are under the SIL Open Font License 1.1.

@@ -6,12 +6,12 @@ __pycache__/
 build/
 dist/
 
-# --- Sanal ortam ---
+# --- Virtual environments ---
 venv/
 .venv/
 env/
 
-# --- Veri & modeller (büyük dosyalar, repoya girmez) ---
+# --- Data & models (large files, never committed) ---
 data/*
 !data/.gitignore
 models/*.pkl
@@ -24,11 +24,11 @@ models/*.joblib
 .DS_Store
 Thumbs.db
 
-# --- Test / coverage ---
+# --- Tests / coverage ---
 .pytest_cache/
 .coverage
 htmlcov/
 
-# --- Capture çıktıları ---
+# --- Capture output ---
 *.pcap
 *.pcapng

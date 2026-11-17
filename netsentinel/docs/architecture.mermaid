@@ -12,7 +12,7 @@ flowchart TB
 
     subgraph OUT["Output"]
         DB[("6 - SQLite<br/>flows / alerts / stats<br/>batch insert")]
-        UI["7 - Dashboard<br/>PySide6 + pyqtgraph<br/>QTimer 250ms batch"]
+        UI["7 - Dashboard<br/>PySide6, painted charts<br/>QTimer 250ms batch"]
         REP["9 - Reporting<br/>CSV / PDF / metrics"]
     end
 
@@ -25,11 +25,10 @@ flowchart TB
     DET --> DB
     DB --> REP
 
-    REPLAY["Replay source<br/>CIC-IDS2017 CSV / DB"] -.->|"demo mode"| DET
+    REPLAY["Replay source<br/>CIC-IDS2017 CSV / DB"] -.->|"replay"| DET
+    DEMO["Demo source<br/>synthetic flows + model outputs"] -.->|"demo mode"| ALERT
 
-    classDef cap fill:#0f140f,stroke:#33ff66,color:#7dffa0
-    classDef proc fill:#0f140f,stroke:#00ffcc,color:#33ff66
-    classDef out fill:#0f140f,stroke:#1f9a3f,color:#33ff66
-    class SNIFF cap
-    class FLOW,FEAT,DET,ALERT proc
-    class DB,UI,REP,REPLAY out
+    classDef base fill:#16171a,stroke:#34363c,color:#ededef
+    classDef risk fill:#16171a,stroke:#f25a5f,color:#ededef
+    class SNIFF,FLOW,FEAT,DET,DB,UI,REP,REPLAY,DEMO base
+    class ALERT risk

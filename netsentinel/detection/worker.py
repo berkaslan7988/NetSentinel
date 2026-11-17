@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import queue
 import threading
+import time
 from typing import Optional
 
 from detection.engine import DetectionEngine
@@ -36,6 +37,7 @@ class DetectionWorker:
         self._name = name
         self.processed = 0
         self.errors = 0
+        self.avg_ms: Optional[float] = None   # smoothed inference time per flow
 
     def start(self) -> None:
         if self._thread is not None:
@@ -50,7 +52,10 @@ class DetectionWorker:
                 if item is _STOP:
                     break
                 if isinstance(item, Flow):
+                    t0 = time.perf_counter()
                     result = self.engine.predict_flow(item)
+                    ms = (time.perf_counter() - t0) * 1000.0
+                    self.avg_ms = ms if self.avg_ms is None else 0.9 * self.avg_ms + 0.1 * ms
                     self.out_queue.put(result)
                     self.processed += 1
             except Exception as exc:  # one bad flow shouldn't kill the worker

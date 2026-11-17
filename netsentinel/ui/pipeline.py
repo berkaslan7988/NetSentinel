@@ -40,6 +40,8 @@ class PipelineStats:
 class DetectionPipeline:
     """Shared base that queues results and raises alerts."""
 
+    kind = "base"
+
     def __init__(self, alert_engine: Optional[AlertEngine] = None) -> None:
         self.results_q: "queue.Queue[DetectionResult]" = queue.Queue()
         self.alerts_q: "queue.Queue" = queue.Queue()
@@ -54,9 +56,15 @@ class DetectionPipeline:
         self.stats.total_alerts += 1
         self.alerts_q.put(alert)
 
-    def emit(self, res: DetectionResult) -> None:
-        """Processes one prediction: alerting + queue + stats."""
-        self.alert_engine.process(res)
+    def emit(self, res: DetectionResult, now: Optional[float] = None) -> None:
+        """Processes one prediction: alerting + queue + stats.
+
+        ``now`` is the time the flow is seen (default: the wall clock). The demo
+        passes historical times for its warm start; the UI buckets by it.
+        """
+        seen = now if now is not None else time.time()
+        res.seen_at = seen
+        self.alert_engine.process(res, now=seen)
         self.results_q.put(res)
         self.stats.total_flows += 1
         if res.is_threat:
@@ -78,6 +86,8 @@ class DetectionPipeline:
 # Live pipeline
 # --------------------------------------------------------------------- #
 class LivePipeline(DetectionPipeline):
+    kind = "live"
+
     def __init__(self, mode: str = "hybrid", iface=None, bpf_filter: str = "ip") -> None:
         super().__init__()
         from capture.sniffer import Sniffer
@@ -94,11 +104,19 @@ class LivePipeline(DetectionPipeline):
             active_timeout=config.FLOW_ACTIVE_TIMEOUT,
             idle_timeout=config.FLOW_IDLE_TIMEOUT,
         )
+        self.packets = 0
         self.sniffer = Sniffer(
-            on_packet=self.manager.process_packet, iface=iface, bpf_filter=bpf_filter
+            on_packet=self._on_packet, iface=iface, bpf_filter=bpf_filter
         )
         self._consumer: Optional[threading.Thread] = None
         self._stop = threading.Event()
+
+    def _on_packet(self, summary) -> None:
+        self.packets += 1
+        self.manager.process_packet(summary)
+
+    def detect_ms(self) -> Optional[float]:
+        return self.worker.avg_ms
 
     def start(self) -> None:
         self.stats = PipelineStats(started_at=time.time())
@@ -134,6 +152,8 @@ class LivePipeline(DetectionPipeline):
 # --------------------------------------------------------------------- #
 class ReplayPipeline(DetectionPipeline):
     """Feeds a precomputed DetectionResult stream at a throttled rate."""
+
+    kind = "replay"
 
     def __init__(self, result_source: Iterable[DetectionResult], rate_hz: float = 20.0) -> None:
         super().__init__()

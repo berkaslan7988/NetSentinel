@@ -4,6 +4,8 @@ Every module reads its settings from here. Grows as the project evolves.
 """
 from pathlib import Path
 
+APP_VERSION = "2.0.0"
+
 # --- Paths ---
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
